@@ -16,6 +16,7 @@ def unsafe_incr(n):
     global counter, errors
     for _ in range(n):
         old_value = counter
+        # Sleeping vs Not Sleeping causes different behavior
         time.sleep(0.00001)
         counter = old_value + 1
 

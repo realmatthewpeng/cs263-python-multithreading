@@ -5,3 +5,4 @@
 - [ ] Compare multithreading between GIL and non-GIL versions
 - [ ] Compare performance with multiprocessing instead
 - [ ] CPU-bound programs and I/O-bound programs
+- [ ] Compare multithreading with multiprocessing
