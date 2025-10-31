@@ -61,16 +61,16 @@ if __name__ == "__main__":
 
     vals = [26,27,28,29,30,31,32,33,34,35]
 
-    # res, runtime = single_threaded(vals)
-    # print(f"Single-threaded results: {res} (runtime: {runtime:.6f} seconds)")
+    res, runtime = single_threaded(vals)
+    print(f"Single-threaded results: {res} (runtime: {runtime:.6f} seconds)")
 
-    num_threads = 10
-    res, runtime = multi_threaded(vals, num_threads)    
-    print(f"{num_threads}-threaded results: {res} (runtime: {runtime:.6f} seconds)")
+    # num_threads = 10
+    # res, runtime = multi_threaded(vals, num_threads)    
+    # print(f"{num_threads}-threaded results: {res} (runtime: {runtime:.6f} seconds)")
 
     # Results: 
     # vals = [26,27,28,29,30,31,32,33,34,35]
-    # Python 3.13t
+    # Python 3.13t (GIL Disabled)
     # No threads: 10.98 s
     # 1 thread:   10.49 s
     # 2 thread:   6.63  s
@@ -78,3 +78,11 @@ if __name__ == "__main__":
     # 4 thread:   5.42  s
     # 5 thread:   4.40  s
     # 10 thread:  4.22  s
+    # Python 3.13 (GIL Enabled)
+    # No threads: 6.54  s
+    # 1 thread:   6.55  s
+    # 2 thread:   6.61  s
+    # 3 thread:   6.64  s
+    # 4 thread:   6.61  s
+    # 5 thread:   6.62  s
+    # 10 thread:  6.64  s

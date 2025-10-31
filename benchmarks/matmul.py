@@ -29,13 +29,14 @@ def perf_timer(func):
     return wrapper
 
 @perf_timer
-def threaded_np_matmul(matrices):
-    results = [None] * 5
+def threaded_np_matmul(matrices, num_threads):
+    results = [None] * (len(matrices)//2)
 
     def worker(idx):
-        results[idx] = np.dot(matrices[idx*2], matrices[idx*2+1])
+        for i in range(idx, len(results), num_threads):
+            results[i] = np.dot(matrices[i*2], matrices[i*2+1])
 
-    threads = [threading.Thread(target=worker, args=(i,)) for i in range(5)]
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(num_threads)]
 
     for t in threads:
         t.start()
@@ -45,13 +46,15 @@ def threaded_np_matmul(matrices):
     return results
 
 @perf_timer
-def threaded_matmul(matrices):
-    results = [None] * 5
+def threaded_matmul(matrices, num_threads):
+    results = [None] * (len(matrices)//2)
 
     def worker(idx):
-        results[idx] = no_np_matmul(matrices[idx*2], matrices[idx*2+1])
+        for i in range(idx, len(results), num_threads):
+            # print(f"Thread {idx} processing index {i}")
+            results[i] = no_np_matmul(matrices[i*2], matrices[i*2+1])
 
-    threads = [threading.Thread(target=worker, args=(i,)) for i in range(5)]
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(num_threads)]
 
     for t in threads:
         t.start()
@@ -64,7 +67,7 @@ def threaded_matmul(matrices):
 def serial_np_matmul(matrices):
     results = []
 
-    for i in range(0,5,2):
+    for i in range(0,len(matrices),2):
         results.append(np.dot(matrices[i], matrices[i+1]))
 
     return results
@@ -73,7 +76,7 @@ def serial_np_matmul(matrices):
 def serial_matmul(matrices):
     results = []
 
-    for i in range(0,5,2):
+    for i in range(0,len(matrices),2):
         results.append(no_np_matmul(matrices[i], matrices[i+1]))
 
     return results
@@ -93,18 +96,45 @@ def no_np_matmul(A, B):
 
     return result
 
-np.random.seed(42)
+def check_res(res, matrices):
 
-print("GIL is enabled: " + str(sys._is_gil_enabled()))
+    for i in range(0,len(matrices),2):
+        expected = np.dot(matrices[i], matrices[i+1])
+        if not np.all(np.isclose(expected, res[i//2])):
+            return False
 
-size = 100
+    return True
 
-matrices = []
-for _ in range(10):
-    matrices.append(np.random.rand(size, size))
 
-threaded_np_matmul(matrices)
-threaded_matmul(matrices)
+if __name__ == "__main__":
+    np.random.seed(42)
 
-serial_np_matmul(matrices)
-serial_matmul(matrices)
+    print("GIL is enabled: " + str(sys._is_gil_enabled()))
+
+    size = 100
+    num_threads = 5
+
+    matrices = []
+    for _ in range(20):
+        matrices.append(np.random.rand(size, size))
+
+    res = threaded_np_matmul(matrices, num_threads)
+    # res = threaded_matmul(matrices, num_threads)
+
+    # res = serial_np_matmul(matrices)
+    # res = serial_matmul(matrices)
+
+    print(f"Check Res returned {check_res(res, matrices)}")
+
+    # Results
+    # 10 random 100x100 matmul
+    # Python 3.13t (GIL Disabled)
+    # threaded_np_matmul, 5 threads: 0.0013 s
+    # threaded_matmul, 5 threads:    2.3115 s
+    # serial_np_matmul:              0.0009 s
+    # serial_matmul:                 9.6155 s
+    # Python 3.13 (GIL Enabled)
+    # threaded_np_matmul, 5 threads: 0.0012 s
+    # threaded_matmul, 5 threads:    8.0204 s
+    # serial_np_matmul:              0.0009 s
+    # serial_matmul:                 8.0039 s
