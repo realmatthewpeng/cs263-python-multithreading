@@ -17,9 +17,14 @@ def unsafe_incr(n):
     for _ in range(n):
         old_value = counter
         # Sleeping vs Not Sleeping causes different behavior
-        time.sleep(0.00001)
+        # I believe sleeping automatically causes thread switches
+        # time.sleep(0.00001)
+        # Also see: https://www.reddit.com/r/learnprogramming/comments/16mlz4h/race_condition_doesnt_happen_from_python_310/
         counter = old_value + 1
 
+def get_one():
+    return 1
+    
 def safe_incr(n):
     """Increment with lock (thread safe)"""
     global counter
@@ -105,3 +110,32 @@ if __name__ == "__main__":
     # Run tests
     test_unsafe(10, 1000)
     test_safe(10, 1000)
+
+    # Results (Probably need to run multiple times to see variability)
+    # Python 3.13t (GIL Disabled)
+    # test_unsafe(10,1000)
+    #   Error rate: 48.23%
+    #   Time: 0.0020 s 
+    # test_unsafe(1,10000)
+    #   Error rate: 0.00%
+    #   Time: 0.0013 s
+    # test_unsafe(2,5000)
+    #   Error rate: 36.38%
+    #   Time: 0.0014 s
+    # test_unsafe(5,2000)
+    #   Error rate: 56.46%
+    #   Time: 0.0018 s
+
+    # Python 3.13 (GIL Enabled)
+    # test_unsafe(10,1000)
+    #   Error rate: 0.00%
+    #   Time: 0.0017 s 
+    # test_unsafe(1,10000)
+    #   Error rate: 0.00%
+    #   Time: 0.0012 s
+    # test_unsafe(2,5000)
+    #   Error rate: 0.00%
+    #   Time: 0.0008 s
+    # test_unsafe(5,2000)
+    #   Error rate: 0.00%
+    #   Time: 0.0012 s
