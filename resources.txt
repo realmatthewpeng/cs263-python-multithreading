@@ -1,0 +1,5 @@
+https://codspeed.io/blog/state-of-python-3-13-performance-free-threading
+https://stackoverflow.com/questions/79009542/python-3-13-with-free-thread-is-slow
+https://www.reddit.com/r/Python/comments/1ift077/recently_wrote_a_blog_post_about_python_without/
+https://www.artima.com/weblogs/viewpost.jsp?thread=214235
+https://medium.com/techtofreedom/python-is-removing-gil-gradually-b41274fa62a4

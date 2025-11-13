@@ -1,0 +1,5 @@
+numpy==2.3.4
+packaging==25.0
+psutil==7.1.3
+pyperf==2.9.0
+pyperformance==1.13.0
