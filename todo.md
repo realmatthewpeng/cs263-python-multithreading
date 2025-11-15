@@ -7,7 +7,8 @@
 - [ ] Compare performance with multiprocessing instead
 - [x] CPU-bound programs and I/O-bound programs
 - [ ] Run some tests from <https://openbenchmarking.org/tests>
-  - [ ] <https://pyperformance.readthedocs.io/index.html>
+  - [x] <https://pyperformance.readthedocs.io/index.html>
   - [ ] <https://svn.python.org/projects/python/trunk/Tools/pybench/>
 - [ ] Compare 3.13t with GIL enabled and disabled
-- [ ] Measure overhead cost of creating many threads
+- [x] Measure overhead cost of creating many threads
+  - [x] Compared to overhead cost of creating processes
