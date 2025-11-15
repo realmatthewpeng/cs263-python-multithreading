@@ -1,9 +1,9 @@
 import psutil
 import os
-import tracemalloc
 import threading
 import time
 import sys
+import json
 
 
 class MemTracker:
@@ -95,6 +95,7 @@ def test_shared_mem(num_threads):
     With GIL ON or OFF, the memory overhead difference should be small.
     The only memory difference is caused by thread bookkeeping/stack memory
     for each thread.
+
     """
 
     # Single shared 50MB array
@@ -126,7 +127,13 @@ def test_fragmentation(num_threads, duration=10):
     Track memory patterns to detect fragmentation
     Threads continuously allocate and deallocate memory over a certain duration of time.
 
-    TODO: Finish displaying metrics
+    By forcing mem allocator to handle high churns (constant creation and deletion of objects),
+    we can observe possible differences in memory overhead with GIL on and off.
+
+    Use flag visual==True to generate visuals using gil on and off json files
+
+    Results: Once again, there is very little difference between the two.
+
     """
 
     def allocate_and_free():
@@ -157,11 +164,126 @@ def test_fragmentation(num_threads, duration=10):
     return tracker.samples
 
 
+def visualize():
+    import matplotlib.pyplot as plt
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_dir = os.path.join(script_dir, "../membench_results")
+
+    with open(os.path.join(output_dir, f"mem_frag_DISABLED.json"), "r") as f:
+        samples1 = json.load(f)
+    with open(os.path.join(output_dir, f"mem_frag_ENABLED.json"), "r") as f:
+        samples2 = json.load(f)
+
+    samples1 = samples1["results"]
+    samples2 = samples2["results"]
+
+    times_off = [s["timestamp"] - samples1[0]["timestamp"] for s in samples1]
+    rss_off = [s["rss_mb"] for s in samples1]
+
+    times_on = [s["timestamp"] - samples2[0]["timestamp"] for s in samples2]
+    rss_on = [s["rss_mb"] for s in samples2]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+    fig.suptitle(
+        "Test 3: Memory Fragmentation Over Time", fontsize=16, fontweight="bold"
+    )
+
+    ax1.plot(times_on, rss_on, label="GIL ON", color="#2ecc71", linewidth=2, alpha=0.8)
+    ax1.plot(
+        times_off, rss_off, label="GIL OFF", color="#e74c3c", linewidth=2, alpha=0.8
+    )
+    ax1.set_xlabel("Time (seconds)", fontsize=12)
+    ax1.set_ylabel("RSS Memory (MB)", fontsize=12)
+    ax1.set_title("Memory Usage Over Time", fontsize=14, fontweight="bold")
+    ax1.legend(fontsize=11)
+    ax1.grid(True, alpha=0.3)
+
+    import statistics
+
+    stats_on = {
+        "min": min(rss_on),
+        "max": max(rss_on),
+        "avg": statistics.mean(rss_on),
+        "std": statistics.stdev(rss_on) if len(rss_on) > 1 else 0,
+    }
+
+    stats_off = {
+        "min": min(rss_off),
+        "max": max(rss_off),
+        "avg": statistics.mean(rss_off),
+        "std": statistics.stdev(rss_off) if len(rss_off) > 1 else 0,
+    }
+
+    metrics = ["Min", "Max", "Average", "Std Dev"]
+    on_values = [stats_on["min"], stats_on["max"], stats_on["avg"], stats_on["std"]]
+    off_values = [
+        stats_off["min"],
+        stats_off["max"],
+        stats_off["avg"],
+        stats_off["std"],
+    ]
+
+    x = range(len(metrics))
+    width = 0.35
+
+    bars1 = ax2.bar(
+        [i - width / 2 for i in x],
+        on_values,
+        width,
+        label="GIL ON",
+        color="#2ecc71",
+        alpha=0.7,
+        edgecolor="black",
+    )
+    bars2 = ax2.bar(
+        [i + width / 2 for i in x],
+        off_values,
+        width,
+        label="GIL OFF",
+        color="#e74c3c",
+        alpha=0.7,
+        edgecolor="black",
+    )
+
+    ax2.set_ylabel("Memory (MB)", fontsize=12)
+    ax2.set_title("Statistical Comparison", fontsize=14, fontweight="bold")
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(metrics)
+    ax2.legend(fontsize=11)
+    ax2.grid(axis="y", alpha=0.3)
+
+    # Add value labels
+    for bars in [bars1, bars2]:
+        for bar in bars:
+            height = bar.get_height()
+            ax2.text(
+                bar.get_x() + bar.get_width() / 2.0,
+                height,
+                f"{height:.1f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+            )
+
+    plt.savefig(os.path.join(output_dir, "visual.png"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def save_res(results, file_name):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_dir = os.path.join(script_dir, "../membench_results")
+    data = {"results": results}
+    with open(os.path.join(output_dir, f"{file_name}.json"), "w") as f:
+        json.dump(data, f, indent=2)
+
+
 def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--test", type=int)
+    parser.add_argument("--test", type=int, default=None)
+    parser.add_argument("--visual", type=bool, default=False)
     args = parser.parse_args()
 
     try:
@@ -180,12 +302,15 @@ def main():
     if args.test == 1:
         res = test_thread_local_mem(NUM_THREADS)
         print(res)
-    if args.test == 2:
+    elif args.test == 2:
         res = test_shared_mem(NUM_THREADS)
         print(res)
-    if args.test == 3:
+    elif args.test == 3:
         res = test_fragmentation(NUM_THREADS)
-        print(res)
+        save_res(res, f"mem_frag_{gil_status}")
+
+    if args.visual:
+        visualize()
 
 
 if __name__ == "__main__":
