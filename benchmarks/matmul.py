@@ -1,4 +1,5 @@
 import threading
+import multiprocessing
 import numpy as np
 import sys
 import time
@@ -81,6 +82,20 @@ def serial_matmul(matrices):
 
     return results
 
+@perf_timer
+def process_pool_np_matmul(matrices, num_procs):
+    pairs = [(matrices[i], matrices[i+1]) for i in range(0, len(matrices), 2)]
+    with multiprocessing.Pool(processes=num_procs) as pool:
+        results = pool.starmap(np.dot, pairs)
+    return results
+
+@perf_timer
+def process_pool_matmul(matrices, num_procs):
+    pairs = [(matrices[i], matrices[i+1]) for i in range(0, len(matrices), 2)]
+    with multiprocessing.Pool(processes=num_procs) as pool:
+        results = pool.starmap(no_np_matmul, pairs)
+    return results
+
 def no_np_matmul(A, B):
 
     # Assume square matrices of same size
@@ -124,6 +139,9 @@ if __name__ == "__main__":
     # res = serial_np_matmul(matrices)
     # res = serial_matmul(matrices)
 
+    # res = process_pool_np_matmul(matrices, num_threads)
+    # res = process_pool_matmul(matrices, num_threads)
+
     print(f"Check Res returned {check_res(res, matrices)}")
 
     # Results
@@ -131,6 +149,8 @@ if __name__ == "__main__":
     # Python 3.13t (GIL Disabled)
     # threaded_np_matmul, 5 threads: 0.0013 s
     # threaded_matmul, 5 threads:    2.3115 s
+    # process_np_matmul, 5 processes: 0.2317 s
+    # process_matmul, 5 processes:    1.6699 s
     # serial_np_matmul:              0.0009 s
     # serial_matmul:                 9.6155 s
     # Python 3.13 (GIL Enabled)
@@ -138,3 +158,5 @@ if __name__ == "__main__":
     # threaded_matmul, 5 threads:    8.0204 s
     # serial_np_matmul:              0.0009 s
     # serial_matmul:                 8.0039 s
+    # process_np_matmul, 5 processes: 0.1454 s
+    # process_matmul, 5 processes:    1.2957 s
