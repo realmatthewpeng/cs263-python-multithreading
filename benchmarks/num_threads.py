@@ -1,4 +1,5 @@
 import threading
+import multiprocessing
 import sys
 import time
 
@@ -43,6 +44,16 @@ def multi_threaded(vals, num_threads):
     execution_time = end - start
 
     return results, execution_time
+
+def multi_processed(vals, num_procs):
+    start = time.perf_counter()
+    with multiprocessing.Pool(processes=num_procs) as pool:
+        results = pool.map(fibonacci, vals)
+
+    end = time.perf_counter()
+    execution_time = end - start
+
+    return results, execution_time
     
 if __name__ == "__main__":
 
@@ -61,12 +72,15 @@ if __name__ == "__main__":
 
     vals = [26,27,28,29,30,31,32,33,34,35]
 
-    res, runtime = single_threaded(vals)
-    print(f"Single-threaded results: {res} (runtime: {runtime:.6f} seconds)")
+    #res, runtime = single_threaded(vals)
+    #print(f"Single-threaded results: {res} (runtime: {runtime:.6f} seconds)")
 
-    # num_threads = 10
-    # res, runtime = multi_threaded(vals, num_threads)    
-    # print(f"{num_threads}-threaded results: {res} (runtime: {runtime:.6f} seconds)")
+    num_threads = 10
+    res, runtime = multi_threaded(vals, num_threads)    
+    print(f"{num_threads}-threaded results: {res} (runtime: {runtime:.6f} seconds)")
+
+    res, runtime = multi_processed(vals, num_threads)    
+    print(f"{num_threads}-processed results: {res} (runtime: {runtime:.6f} seconds)")
 
     # Results: 
     # vals = [26,27,28,29,30,31,32,33,34,35]

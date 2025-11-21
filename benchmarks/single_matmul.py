@@ -1,6 +1,8 @@
 import argparse
 import time
 import threading
+import multiprocessing
+from multiprocessing import shared_memory
 import random
 import math
 import numpy as np
@@ -114,6 +116,134 @@ def multithread_matmul_pure(A, B, num_threads=4):
     return R
 
 
+def _proc_np_worker(a_slice, B, start):
+    return (start, a_slice.dot(B))
+
+
+def _proc_pure_worker(a_rows, B, start):
+    m = len(B[0])
+    p = len(B)
+    result_rows = [[0.0] * m for _ in range(len(a_rows))]
+    for ri, ai in enumerate(a_rows):
+        for k in range(p):
+            aik = ai[k]
+            bk = B[k]
+            row_out = result_rows[ri]
+            for j in range(m):
+                row_out[j] += aik * bk[j]
+    return (start, result_rows)
+
+
+@perf_timer
+def multiprocess_matmul(A, B, num_processes=4):
+    n_rows = A.shape[0]
+    R = np.empty((n_rows, B.shape[1]), dtype=A.dtype)
+
+    chunk_size = (n_rows + num_processes - 1) // num_processes
+    tasks = []
+    for i in range(num_processes):
+        start = i * chunk_size
+        if start >= n_rows:
+            break
+        end = min((i + 1) * chunk_size, n_rows)
+        tasks.append((A[start:end, :], B, start))
+
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        results = pool.starmap(_proc_np_worker, tasks)
+
+    for start, chunk in results:
+        R[start:start + chunk.shape[0], :] = chunk
+
+    return R
+
+
+@perf_timer
+def multiprocess_matmul_pure(A, B, num_processes=4):
+    n = len(A)
+    R = [[0.0] * len(B[0]) for _ in range(n)]
+
+    chunk_size = (n + num_processes - 1) // num_processes
+    tasks = []
+    for i in range(num_processes):
+        start = i * chunk_size
+        if start >= n:
+            break
+        end = min((i + 1) * chunk_size, n)
+        tasks.append((A[start:end], B, start))
+
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        results = pool.starmap(_proc_pure_worker, tasks)
+
+    for start, chunk_rows in results:
+        for i, row in enumerate(chunk_rows):
+            R[start + i] = row
+
+    return R
+
+
+# Shared-memory NumPy multiprocess implementation to avoid copying large A/B
+GLOBAL_A = None
+GLOBAL_B = None
+# Shared memory handles need to be global so they don't get GC'd
+# https://stackoverflow.com/questions/79787708/python-multiprocessing-shared-memory-seems-to-hang-or-crash-when-interacting-wit
+shm_a = None
+shm_b = None
+
+
+def _init_shared_shm(name_a, shape_a, name_b, shape_b, dtype):
+    global GLOBAL_A, GLOBAL_B, shm_a, shm_b
+    shm_a = shared_memory.SharedMemory(name=name_a)
+    shm_b = shared_memory.SharedMemory(name=name_b)
+    GLOBAL_A = np.ndarray(shape_a, dtype=dtype, buffer=shm_a.buf)
+    GLOBAL_B = np.ndarray(shape_b, dtype=dtype, buffer=shm_b.buf)
+
+
+def _shared_np_worker_range(args):
+    start, end = args
+    chunk = GLOBAL_A[start:end, :].dot(GLOBAL_B)
+    return (start, chunk)
+
+
+@perf_timer
+def multiprocess_matmul_shared(A, B, num_processes=4):
+    n_rows = A.shape[0]
+    R = np.empty((n_rows, B.shape[1]), dtype=A.dtype)
+
+    global shm_a, shm_b
+    # create shared memory blocks and copy A, B into them
+    shm_a = shared_memory.SharedMemory(create=True, size=A.nbytes)
+    shm_b = shared_memory.SharedMemory(create=True, size=B.nbytes)
+
+    a_shm_arr = np.ndarray(A.shape, dtype=A.dtype, buffer=shm_a.buf)
+    b_shm_arr = np.ndarray(B.shape, dtype=B.dtype, buffer=shm_b.buf)
+
+    a_shm_arr[:] = A[:]
+    b_shm_arr[:] = B[:]
+
+    chunk_size = (n_rows + num_processes - 1) // num_processes
+    tasks = []
+    for i in range(num_processes):
+        start = i * chunk_size
+        if start >= n_rows:
+            break
+        end = min((i + 1) * chunk_size, n_rows)
+        tasks.append((start, end))
+
+    init_args = (shm_a.name, A.shape, shm_b.name, B.shape, A.dtype)
+    with multiprocessing.Pool(processes=num_processes, initializer=_init_shared_shm, initargs=init_args) as pool:
+        results = pool.map(_shared_np_worker_range, tasks)
+
+    for start, chunk in results:
+        R[start:start + chunk.shape[0], :] = chunk
+
+    shm_a.close()
+    shm_a.unlink()
+    shm_b.close()
+    shm_b.unlink()
+
+    return R
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--size", type=int, default=5000, help="matrix size (n for n x n)")
@@ -131,9 +261,15 @@ def main():
 
         R_single = single_thread_matmul(A, B)
 
-        R_multi = multithread_matmul(A, B, num_threads=args.threads)
+        #R_multi = multithread_matmul(A, B, num_threads=args.threads)
+        #equal = np.allclose(R_single, R_multi, rtol=1e-5, atol=1e-8)
 
-        equal = np.allclose(R_single, R_multi, rtol=1e-5, atol=1e-8)
+        #R_multi_process = multiprocess_matmul(A, B, num_processes=args.threads)
+        #equal = np.allclose(R_single, R_multi_process, rtol=1e-5, atol=1e-8)
+
+        R_multi_process_shared = multiprocess_matmul_shared(A, B, num_processes=args.threads)
+        equal = np.allclose(R_single, R_multi_process_shared, rtol=1e-5, atol=1e-8)
+
         print(f"Results equal: {equal}")
     else:
         if n > 500:
@@ -146,7 +282,6 @@ def main():
         B = [[random.random() for _ in range(n)] for _ in range(n)]
 
         R_single = single_thread_matmul_pure(A, B)
-        R_multi = multithread_matmul_pure(A, B, num_threads=args.threads)
 
         def approx_equal(L1, L2, rel=1e-6, abs_tol=1e-8):
             for i in range(len(L1)):
@@ -157,7 +292,12 @@ def main():
                         return False
             return True
 
-        equal = approx_equal(R_single, R_multi)
+        #R_multi = multithread_matmul_pure(A, B, num_threads=args.threads)
+        #equal = approx_equal(R_single, R_multi)
+
+        R_multi_process = multiprocess_matmul_pure(A, B, num_processes=args.threads)
+        equal = approx_equal(R_single, R_multi_process)
+
         print(f"Results equal: {equal}")
 
 
