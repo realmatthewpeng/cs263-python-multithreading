@@ -36,33 +36,26 @@ def test_thread_local_mem(num_threads):
 
     When multiple threads allocate local memory, GIL handles memory
     management efficiently as allocations are packed tightly (with no mem overhead)
+
     With GIL turned OFF, there is higher overhead per thread. To avoid lock contention,
     Python creates memory arenas for each thread, leading to memory overhead.
 
     Results:
-    GIL: DISABLED
-    Number of threads: 8
-    {'baseline_mb': 17.890625, 'peak_mb': 99.65625, 'overhead_mb': 81.765625, 'per_thread_mb': 10.220703125}
-
-    GIL: ENABLED
-    Number of threads: 8
-    {'baseline_mb': 18.046875, 'peak_mb': 99.5625, 'overhead_mb': 81.515625, 'per_thread_mb': 10.189453125}
-
-    Virtually the same...
-
-    TODO: Explain the results
+    Contrary to the prediction of memory overhead from per-thread areans (GIL OFF), testing shows that Python 3.13's free-threaded implementation maintains nearly identical memory usage with GIL OFF.
     """
 
+    """
+    barrier = threading.Barrier(num_threads)
+
     def allocate_local(barrier):
-        # Each thread gets its own 10MB of data
-        local_data = [0] * (10 * 1024 * 1024 // 8)
-        # Hold the memory
+        local_data = []
+        for _ in range(10000):
+            local_data.append([0] * 100)
+        barrier.wait()
         time.sleep(2)
 
     tracker = MemTracker()
     baseline = tracker.get_curr_mem()["rss_mb"]
-
-    barrier = threading.Barrier(num_threads)
 
     threads = [
         threading.Thread(target=allocate_local, args=(barrier,))
@@ -72,7 +65,7 @@ def test_thread_local_mem(num_threads):
     for t in threads:
         t.start()
 
-    time.sleep(2)
+    time.sleep(2.5)
     peak = tracker.get_curr_mem()["rss_mb"]
 
     for t in threads:
@@ -84,6 +77,29 @@ def test_thread_local_mem(num_threads):
         "overhead_mb": peak - baseline,
         "per_thread_mb": (peak - baseline) / num_threads,
     }
+    """
+
+    import tracemalloc
+
+    def memory_intensive_task():
+        # Your workload here
+        data = [list(range(10000)) for _ in range(100)]
+        # Process data...
+
+    tracemalloc.start()
+    snapshot_before = tracemalloc.take_snapshot()
+
+    threads = [threading.Thread(target=memory_intensive_task) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    snapshot_after = tracemalloc.take_snapshot()
+
+    top_stats = snapshot_after.compare_to(snapshot_before, "lineno")
+    for stat in top_stats[:10]:
+        print(stat)
 
 
 def test_shared_mem(num_threads):
@@ -95,6 +111,10 @@ def test_shared_mem(num_threads):
     With GIL ON or OFF, the memory overhead difference should be small.
     The only memory difference is caused by thread bookkeeping/stack memory
     for each thread.
+
+    Results:
+
+    As expected, memory usage is nearly identical between GIl enabled and GIL disabled modes. This demonstrates that if there is any caused by GIL removal, it is caused primarily by the allocation management. Shared read-only data patterns show no memory penalty.
 
     """
 
@@ -132,15 +152,18 @@ def test_fragmentation(num_threads, duration=10):
 
     Use flag visual==True to generate visuals using gil on and off json files
 
-    Results: Once again, there is very little difference between the two.
+    Results: Once again, the memory overhead is similar with both GIL on and off.
+    However, with GIL off, performance gain is substantial, with 3.7x faster with aggressive allocation testing.
+    Seems like Python 3.13's allocator is well-tuned and handles free threading efficiently.
 
     """
 
     def allocate_and_free():
         while not stop_flag:
-            data = [list(range(1000)) for _ in range(100)]
+            data = []
+            for _ in range(10000):
+                data.append([0] * 100)
             del data
-            time.sleep(0.01)
 
     stop_flag = False
     tracker = MemTracker()
@@ -284,6 +307,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", type=int, default=None)
     parser.add_argument("--visual", type=bool, default=False)
+    parser.add_argument("--num_threads", type=int, default=8)
     args = parser.parse_args()
 
     try:
@@ -296,7 +320,7 @@ def main():
 
     print(f"GIL: {gil_status}")
 
-    NUM_THREADS = 8
+    NUM_THREADS = args.num_threads
     print(f"Number of threads: {NUM_THREADS}")
 
     if args.test == 1:
