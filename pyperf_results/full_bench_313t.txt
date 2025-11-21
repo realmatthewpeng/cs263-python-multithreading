@@ -1,0 +1,341 @@
+Performance version: 1.13.0
+Report on macOS-15.4.1-x86_64-i386-64bit-Mach-O
+Number of logical CPUs: 16
+Start date: 2025-11-21 02:39:33.948657
+End date: 2025-11-21 05:53:28.076539
+
+### 2to3 ###
+Mean +- std dev: 441 ms +- 9 ms
+
+### many_optionals ###
+Mean +- std dev: 1.33 ms +- 0.05 ms
+
+### subparsers ###
+Mean +- std dev: 27.6 ms +- 1.2 ms
+
+### async_generators ###
+Mean +- std dev: 499 ms +- 19 ms
+
+### async_tree_none ###
+Mean +- std dev: 447 ms +- 10 ms
+
+### async_tree_cpu_io_mixed ###
+Mean +- std dev: 694 ms +- 16 ms
+
+### async_tree_cpu_io_mixed_tg ###
+Mean +- std dev: 646 ms +- 17 ms
+
+### async_tree_eager ###
+Mean +- std dev: 184 ms +- 5 ms
+
+### async_tree_eager_cpu_io_mixed ###
+Mean +- std dev: 505 ms +- 10 ms
+
+### async_tree_eager_cpu_io_mixed_tg ###
+Mean +- std dev: 584 ms +- 9 ms
+
+### async_tree_eager_io ###
+Mean +- std dev: 878 ms +- 15 ms
+
+### async_tree_eager_io_tg ###
+Mean +- std dev: 820 ms +- 16 ms
+
+### async_tree_eager_memoization ###
+Mean +- std dev: 357 ms +- 7 ms
+
+### async_tree_eager_memoization_tg ###
+Mean +- std dev: 431 ms +- 8 ms
+
+### async_tree_eager_tg ###
+Mean +- std dev: 309 ms +- 7 ms
+
+### async_tree_io ###
+Mean +- std dev: 908 ms +- 15 ms
+
+### async_tree_io_tg ###
+Mean +- std dev: 885 ms +- 34 ms
+
+### async_tree_memoization ###
+Mean +- std dev: 541 ms +- 10 ms
+
+### async_tree_memoization_tg ###
+Mean +- std dev: 502 ms +- 12 ms
+
+### async_tree_none_tg ###
+Mean +- std dev: 411 ms +- 20 ms
+
+### asyncio_tcp ###
+Mean +- std dev: 796 ms +- 37 ms
+
+### asyncio_tcp_ssl ###
+Mean +- std dev: 1.88 sec +- 0.04 sec
+
+### asyncio_websockets ###
+Mean +- std dev: 358 ms +- 6 ms
+
+### bpe_tokeniser ###
+Mean +- std dev: 6.23 sec +- 0.13 sec
+
+### chameleon ###
+Mean +- std dev: 22.4 ms +- 0.6 ms
+
+### chaos ###
+Mean +- std dev: 120 ms +- 5 ms
+
+### comprehensions ###
+Mean +- std dev: 26.7 us +- 0.6 us
+
+### bench_mp_pool ###
+Mean +- std dev: 129 ms +- 3 ms
+
+### bench_thread_pool ###
+Mean +- std dev: 1.23 ms +- 0.05 ms
+
+### coroutines ###
+Mean +- std dev: 30.8 ms +- 0.8 ms
+
+### coverage ###
+Mean +- std dev: 96.7 ms +- 3.3 ms
+
+### crypto_pyaes ###
+Mean +- std dev: 95.7 ms +- 2.2 ms
+
+### dask ###
+Mean +- std dev: 1.35 sec +- 0.06 sec
+
+### deepcopy ###
+Mean +- std dev: 587 us +- 22 us
+
+### deepcopy_reduce ###
+Mean +- std dev: 4.96 us +- 0.13 us
+
+### deepcopy_memo ###
+Mean +- std dev: 61.2 us +- 1.4 us
+
+### deltablue ###
+Mean +- std dev: 7.65 ms +- 0.15 ms
+
+### django_template ###
+Mean +- std dev: 62.0 ms +- 3.3 ms
+
+### docutils ###
+Mean +- std dev: 3.27 sec +- 0.07 sec
+
+### dulwich_log ###
+Mean +- std dev: 113 ms +- 5 ms
+
+### fannkuch ###
+Mean +- std dev: 506 ms +- 6 ms
+
+### float ###
+Mean +- std dev: 137 ms +- 3 ms
+
+### create_gc_cycles ###
+Mean +- std dev: 1.72 ms +- 0.10 ms
+
+### gc_traversal ###
+Mean +- std dev: 3.70 ms +- 0.11 ms
+
+### generators ###
+Mean +- std dev: 41.1 ms +- 1.3 ms
+
+### genshi_text ###
+Mean +- std dev: 38.1 ms +- 1.6 ms
+
+### genshi_xml ###
+Mean +- std dev: 85.0 ms +- 2.3 ms
+
+### go ###
+Mean +- std dev: 284 ms +- 6 ms
+
+### hexiom ###
+Mean +- std dev: 10.9 ms +- 0.3 ms
+
+### html5lib ###
+Mean +- std dev: 100 ms +- 2 ms
+
+### json_dumps ###
+Mean +- std dev: 12.8 ms +- 0.4 ms
+
+### json_loads ###
+Mean +- std dev: 31.9 us +- 1.0 us
+
+### logging_format ###
+Mean +- std dev: 14.8 us +- 0.5 us
+
+### logging_silent ###
+Mean +- std dev: 673 ns +- 24 ns
+
+### logging_simple ###
+Mean +- std dev: 13.0 us +- 0.3 us
+
+### mako ###
+Mean +- std dev: 19.0 ms +- 0.5 ms
+
+### mdp ###
+Mean +- std dev: 3.06 sec +- 0.08 sec
+
+### meteor_contest ###
+Mean +- std dev: 128 ms +- 3 ms
+
+### nbody ###
+Mean +- std dev: 224 ms +- 3 ms
+
+### shortest_path ###
+Mean +- std dev: 656 ms +- 7 ms
+
+### connected_components ###
+Mean +- std dev: 593 ms +- 26 ms
+
+### k_core ###
+Mean +- std dev: 2.99 sec +- 0.03 sec
+
+### nqueens ###
+Mean +- std dev: 126 ms +- 5 ms
+
+### pathlib ###
+Mean +- std dev: 39.7 ms +- 1.8 ms
+
+### pickle ###
+Mean +- std dev: 12.5 us +- 0.3 us
+
+### pickle_dict ###
+Mean +- std dev: 31.1 us +- 0.5 us
+
+### pickle_list ###
+Mean +- std dev: 5.06 us +- 0.08 us
+
+### pickle_pure_python ###
+Mean +- std dev: 544 us +- 11 us
+
+### pidigits ###
+Mean +- std dev: 188 ms +- 4 ms
+
+### pprint_safe_repr ###
+Mean +- std dev: 1.23 sec +- 0.02 sec
+
+### pprint_pformat ###
+Mean +- std dev: 2.61 sec +- 0.11 sec
+
+### pyflate ###
+Mean +- std dev: 700 ms +- 10 ms
+
+### python_startup ###
+Mean +- std dev: 38.6 ms +- 1.1 ms
+
+### python_startup_no_site ###
+Mean +- std dev: 31.8 ms +- 1.6 ms
+
+### raytrace ###
+Mean +- std dev: 606 ms +- 14 ms
+
+### regex_compile ###
+Mean +- std dev: 217 ms +- 5 ms
+
+### regex_dna ###
+Mean +- std dev: 152 ms +- 3 ms
+
+### regex_effbot ###
+Mean +- std dev: 2.63 ms +- 0.06 ms
+
+### regex_v8 ###
+Mean +- std dev: 20.1 ms +- 0.5 ms
+
+### richards ###
+Mean +- std dev: 77.0 ms +- 2.4 ms
+
+### richards_super ###
+Mean +- std dev: 91.9 ms +- 2.4 ms
+
+### scimark_fft ###
+Mean +- std dev: 447 ms +- 7 ms
+
+### scimark_lu ###
+Mean +- std dev: 216 ms +- 7 ms
+
+### scimark_monte_carlo ###
+Mean +- std dev: 111 ms +- 4 ms
+
+### scimark_sor ###
+Mean +- std dev: 238 ms +- 7 ms
+
+### scimark_sparse_mat_mult ###
+Mean +- std dev: 6.59 ms +- 0.99 ms
+
+### spectral_norm ###
+Mean +- std dev: 188 ms +- 20 ms
+
+### sphinx ###
+Mean +- std dev: 1.30 sec +- 0.03 sec
+
+### sqlalchemy_declarative ###
+Mean +- std dev: 205 ms +- 5 ms
+
+### sqlalchemy_imperative ###
+Mean +- std dev: 31.2 ms +- 1.6 ms
+
+### sqlglot_v2_normalize ###
+Mean +- std dev: 179 ms +- 4 ms
+
+### sqlglot_v2_optimize ###
+Mean +- std dev: 88.1 ms +- 5.5 ms
+
+### sqlglot_v2_parse ###
+Mean +- std dev: 2.64 ms +- 0.08 ms
+
+### sqlglot_v2_transpile ###
+Mean +- std dev: 3.09 ms +- 0.07 ms
+
+### sqlite_synth ###
+Mean +- std dev: 2.63 us +- 0.06 us
+
+### sympy_expand ###
+Mean +- std dev: 920 ms +- 18 ms
+
+### sympy_integrate ###
+Mean +- std dev: 29.5 ms +- 0.8 ms
+
+### sympy_sum ###
+Mean +- std dev: 314 ms +- 10 ms
+
+### sympy_str ###
+Mean +- std dev: 489 ms +- 10 ms
+
+### telco ###
+Mean +- std dev: 9.89 ms +- 0.23 ms
+
+### tomli_loads ###
+Mean +- std dev: 3.12 sec +- 0.05 sec
+
+### tornado_http ###
+Mean +- std dev: 192 ms +- 7 ms
+
+### typing_runtime_protocols ###
+Mean +- std dev: 228 us +- 7 us
+
+### unpack_sequence ###
+Mean +- std dev: 135 ns +- 3 ns
+
+### unpickle ###
+Mean +- std dev: 16.6 us +- 0.9 us
+
+### unpickle_list ###
+Mean +- std dev: 5.05 us +- 0.10 us
+
+### unpickle_pure_python ###
+Mean +- std dev: 360 us +- 10 us
+
+### xdsl_constant_fold ###
+Mean +- std dev: 71.0 ms +- 4.9 ms
+
+### xml_etree_parse ###
+Mean +- std dev: 147 ms +- 4 ms
+
+### xml_etree_iterparse ###
+Mean +- std dev: 111 ms +- 3 ms
+
+### xml_etree_generate ###
+Mean +- std dev: 107 ms +- 2 ms
+
+### xml_etree_process ###
+Mean +- std dev: 87.9 ms +- 3.0 ms
