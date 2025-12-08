@@ -66,5 +66,4 @@ All benchmarks are located in the `benchmarks/` directory. Run each Python file 
 
 ## Authors
 
-Matthew Peng, @realmatthewpeng
-Tim Kim, @taeseongk
+[![Contributors](https://img.shields.io/github/contributors/realmatthewpeng/cs263-python-multithreading.svg)](https://github.com/realmatthewpeng/cs263-python-multithreading/graphs/contributors)
