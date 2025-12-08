@@ -6,6 +6,7 @@ from multiprocessing import shared_memory
 import random
 import math
 import numpy as np
+import sys
 
 
 def perf_timer(func):
@@ -244,61 +245,121 @@ def multiprocess_matmul_shared(A, B, num_processes=4):
     return R
 
 
+def approx_equal(L1, L2, rel=1e-6, abs_tol=1e-8):
+    """Check if two lists of lists are approximately equal."""
+    for i in range(len(L1)):
+        row1 = L1[i]
+        row2 = L2[i]
+        for j in range(len(row1)):
+            if not math.isclose(row1[j], row2[j], rel_tol=rel, abs_tol=abs_tol):
+                return False
+    return True
+
+
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--size", type=int, default=5000, help="matrix size (n for n x n)")
-    p.add_argument("--threads", type=int, default=5, help="number of worker threads")
-    p.add_argument("--impl", choices=["numpy", "pure"], default="numpy", help="which implementation to run")
+    p = argparse.ArgumentParser(
+        description="Single matrix multiplication benchmark comparing serial, threaded, and multiprocess approaches",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python single_matmul.py --size 1000 --mode single_np
+  python single_matmul.py --size 300 --impl pure --mode multi_thread --threads 4
+  python single_matmul.py --impl numpy --mode multi_process_shared --threads 8
+
+Modes for numpy implementation:
+  single, multi_thread, multi_process, multi_process_shared, all
+
+Modes for pure Python implementation:
+  single, multi_thread, multi_process, all
+"""
+    )
+    p.add_argument("--size", type=int, default=500, help="Matrix size n for n x n (default: 500)")
+    p.add_argument("--threads", type=int, default=5, help="Number of worker threads/processes (default: 5)")
+    p.add_argument("--impl", choices=["numpy", "pure"], default="numpy",
+                   help="Implementation type: 'numpy' or 'pure' Python (default: numpy)")
+    p.add_argument("--mode", type=str, default="all",
+                   choices=["single", "multi_thread", "multi_process", "multi_process_shared", "all"],
+                   help="Which benchmark(s) to run (default: all)")
+    p.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     args = p.parse_args()
 
     n = args.size
 
+    # Validate size for pure implementation
+    if args.impl == "pure" and n > 500:
+        print(f"Warning: Size {n} is too large for pure-Python implementation. Using 500 instead.")
+        n = 500
+
+    # Validate mode for pure implementation (no shared memory variant)
+    if args.impl == "pure" and args.mode == "multi_process_shared":
+        print("Error: 'multi_process_shared' mode is only available for numpy implementation.")
+        sys.exit(1)
+
+    print(f"GIL is enabled: {sys._is_gil_enabled()}")
+    print(f"Creating two {n}x{n} matrices ({args.impl} implementation)")
+
     if args.impl == "numpy":
-        print(f"Creating two {n}x{n} matrices")
-        np.random.seed(42)
+        np.random.seed(args.seed)
         A = np.random.rand(n, n).astype(np.float64)
         B = np.random.rand(n, n).astype(np.float64)
 
-        R_single = single_thread_matmul(A, B)
+        R_ref = None
+        results = {}
 
-        #R_multi = multithread_matmul(A, B, num_threads=args.threads)
-        #equal = np.allclose(R_single, R_multi, rtol=1e-5, atol=1e-8)
+        if args.mode in ("single", "all"):
+            R_ref = single_thread_matmul(A, B)
+            results["single"] = R_ref
 
-        #R_multi_process = multiprocess_matmul(A, B, num_processes=args.threads)
-        #equal = np.allclose(R_single, R_multi_process, rtol=1e-5, atol=1e-8)
+        if args.mode in ("multi_thread", "all"):
+            R = multithread_matmul(A, B, num_threads=args.threads)
+            results["multi_thread"] = R
+            if R_ref is None:
+                R_ref = R
 
-        R_multi_process_shared = multiprocess_matmul_shared(A, B, num_processes=args.threads)
-        equal = np.allclose(R_single, R_multi_process_shared, rtol=1e-5, atol=1e-8)
+        if args.mode in ("multi_process", "all"):
+            R = multiprocess_matmul(A, B, num_processes=args.threads)
+            results["multi_process"] = R
+            if R_ref is None:
+                R_ref = R
 
-        print(f"Results equal: {equal}")
-    else:
-        if n > 500:
-            print("Array size too large for pure-Python implementation; skipping.")
-            return
+        if args.mode in ("multi_process_shared", "all"):
+            R = multiprocess_matmul_shared(A, B, num_processes=args.threads)
+            results["multi_process_shared"] = R
+            if R_ref is None:
+                R_ref = R
 
-        print(f"Creating two {n}x{n} Python matrices (lists of lists)")
-        random.seed(42)
+        # Verify all results match
+        if len(results) > 1 and R_ref is not None:
+            all_equal = all(np.allclose(R_ref, r, rtol=1e-5, atol=1e-8) for r in results.values())
+            print(f"All results equal: {all_equal}")
+
+    else:  # pure Python
+        random.seed(args.seed)
         A = [[random.random() for _ in range(n)] for _ in range(n)]
         B = [[random.random() for _ in range(n)] for _ in range(n)]
 
-        R_single = single_thread_matmul_pure(A, B)
+        R_ref = None
+        results = {}
 
-        def approx_equal(L1, L2, rel=1e-6, abs_tol=1e-8):
-            for i in range(len(L1)):
-                row1 = L1[i]
-                row2 = L2[i]
-                for j in range(len(row1)):
-                    if not math.isclose(row1[j], row2[j], rel_tol=rel, abs_tol=abs_tol):
-                        return False
-            return True
+        if args.mode in ("single", "all"):
+            R_ref = single_thread_matmul_pure(A, B)
+            results["single"] = R_ref
 
-        #R_multi = multithread_matmul_pure(A, B, num_threads=args.threads)
-        #equal = approx_equal(R_single, R_multi)
+        if args.mode in ("multi_thread", "all"):
+            R = multithread_matmul_pure(A, B, num_threads=args.threads)
+            results["multi_thread"] = R
+            if R_ref is None:
+                R_ref = R
 
-        R_multi_process = multiprocess_matmul_pure(A, B, num_processes=args.threads)
-        equal = approx_equal(R_single, R_multi_process)
+        if args.mode in ("multi_process", "all"):
+            R = multiprocess_matmul_pure(A, B, num_processes=args.threads)
+            results["multi_process"] = R
+            if R_ref is None:
+                R_ref = R
 
-        print(f"Results equal: {equal}")
+        # Verify all results match
+        if len(results) > 1 and R_ref is not None:
+            all_equal = all(approx_equal(R_ref, r) for r in results.values())
+            print(f"All results equal: {all_equal}")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,10 @@
-import threading
+import argparse
 import multiprocessing
-import numpy as np
 import sys
+import threading
 import time
+
+import numpy as np
 
 # Using Python 3.13
 
@@ -122,27 +124,42 @@ def check_res(res, matrices):
 
 
 if __name__ == "__main__":
-    np.random.seed(42)
+    parser = argparse.ArgumentParser(description="Matrix multiplication benchmark comparing serial, threaded, and multiprocessing approaches")
+    parser.add_argument("--size", type=int, default=100, help="Size of square matrices (default: 100)")
+    parser.add_argument("--num-matrices", type=int, default=20, help="Number of matrices to generate (default: 20)")
+    parser.add_argument("--threads", type=int, default=5, help="Number of threads/processes (default: 5)")
+    parser.add_argument("--mode", type=str, 
+                        choices=["threaded_np", "threaded", "serial_np", "serial", "process_np", "process", "all"],
+                        default="threaded_np",
+                        help="Benchmark mode (default: threaded_np)")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    args = parser.parse_args()
+
+    np.random.seed(args.seed)
 
     print("GIL is enabled: " + str(sys._is_gil_enabled()))
 
-    size = 100
-    num_threads = 5
-
     matrices = []
-    for _ in range(20):
-        matrices.append(np.random.rand(size, size))
+    for _ in range(args.num_matrices):
+        matrices.append(np.random.rand(args.size, args.size))
 
-    res = threaded_np_matmul(matrices, num_threads)
-    # res = threaded_matmul(matrices, num_threads)
+    res = None
 
-    # res = serial_np_matmul(matrices)
-    # res = serial_matmul(matrices)
+    if args.mode == "threaded_np" or args.mode == "all":
+        res = threaded_np_matmul(matrices, args.threads)
+    if args.mode == "threaded" or args.mode == "all":
+        res = threaded_matmul(matrices, args.threads)
+    if args.mode == "serial_np" or args.mode == "all":
+        res = serial_np_matmul(matrices)
+    if args.mode == "serial" or args.mode == "all":
+        res = serial_matmul(matrices)
+    if args.mode == "process_np" or args.mode == "all":
+        res = process_pool_np_matmul(matrices, args.threads)
+    if args.mode == "process" or args.mode == "all":
+        res = process_pool_matmul(matrices, args.threads)
 
-    # res = process_pool_np_matmul(matrices, num_threads)
-    # res = process_pool_matmul(matrices, num_threads)
-
-    print(f"Check Res returned {check_res(res, matrices)}")
+    if res is not None:
+        print(f"Check Res returned {check_res(res, matrices)}")
 
     # Results
     # 10 random 100x100 matmul

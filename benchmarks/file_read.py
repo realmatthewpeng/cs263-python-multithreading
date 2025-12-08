@@ -1,9 +1,10 @@
+import argparse
+import hashlib
 import os
 import sys
 import tempfile
 import threading
 import time
-import hashlib
 
 def perf_timer(func):
     def wrapper(*args, **kwargs):
@@ -78,24 +79,33 @@ def cleanup(paths, base_dir):
         pass
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="File read benchmark comparing serial vs threaded I/O")
+    parser.add_argument("--num-files", type=int, default=12, help="Number of files to create (default: 12)")
+    parser.add_argument("--size-mb", type=int, default=16, help="Size of each file in MB (default: 16)")
+    parser.add_argument("--threads", type=int, default=8, help="Number of threads for threaded read (default: 8)")
+    parser.add_argument("--mode", type=str, choices=["serial", "threaded", "both"], default="both",
+                        help="Read mode: 'serial', 'threaded', or 'both' (default: both)")
+    args = parser.parse_args()
 
     print("GIL is enabled: " + str(sys._is_gil_enabled()))
 
     tmpdir = tempfile.mkdtemp(prefix="io_bench_")
     print(f"Temp dir: {tmpdir}")
 
-    NUM_FILES = 12
-    SIZE_MB = 16
-    THREADS = 8
+    print(f"Creating {args.num_files} files of {args.size_mb} MB each (total ~{args.num_files*args.size_mb} MB)...")
+    paths = write_temp_files(tmpdir, num_files=args.num_files, size_mb=args.size_mb)
 
-    print(f"Creating {NUM_FILES} files of {SIZE_MB} MB each (total ~{NUM_FILES*SIZE_MB} MB)...")
-    paths = write_temp_files(tmpdir, num_files=NUM_FILES, size_mb=SIZE_MB)
+    serial_result = None
+    threaded_result = None
 
-    serial = serial_read(paths)
-    threaded = threaded_read(paths, num_threads=THREADS)
+    if args.mode in ("serial", "both"):
+        serial_result = serial_read(paths)
+    if args.mode in ("threaded", "both"):
+        threaded_result = threaded_read(paths, num_threads=args.threads)
 
-    ok = serial == threaded
-    print(f"Checksums match across methods: {ok}")
+    if args.mode == "both":
+        ok = serial_result == threaded_result
+        print(f"Checksums match across methods: {ok}")
 
     cleanup(paths, tmpdir)
 

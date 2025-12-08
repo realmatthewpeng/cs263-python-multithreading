@@ -1,6 +1,7 @@
-import threading
+import argparse
 import multiprocessing
 import sys
+import threading
 import time
 
 def fibonacci(n):
@@ -56,6 +57,14 @@ def multi_processed(vals, num_procs):
     return results, execution_time
     
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fibonacci benchmark comparing single-threaded, multi-threaded, and multi-process execution")
+    parser.add_argument("--vals", type=int, nargs="+", default=[26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+                        help="List of Fibonacci values to compute (default: 26-35)")
+    parser.add_argument("--threads", type=int, default=10, help="Number of threads/processes (default: 10)")
+    parser.add_argument("--mode", type=str, choices=["single", "threaded", "processed", "all"], default="all",
+                        help="Execution mode (default: all)")
+    parser.add_argument("--no-warmup", action="store_true", help="Skip warmup")
+    args = parser.parse_args()
 
     # Check GIL status
     try:
@@ -68,19 +77,20 @@ if __name__ == "__main__":
 
     print(f"GIL: {gil_status}")
 
-    warmup()
+    if not args.no_warmup:
+        warmup()
 
-    vals = [26,27,28,29,30,31,32,33,34,35]
+    if args.mode in ("single", "all"):
+        res, runtime = single_threaded(args.vals)
+        print(f"Single-threaded results: {res} (runtime: {runtime:.6f} seconds)")
 
-    #res, runtime = single_threaded(vals)
-    #print(f"Single-threaded results: {res} (runtime: {runtime:.6f} seconds)")
+    if args.mode in ("threaded", "all"):
+        res, runtime = multi_threaded(args.vals, args.threads)
+        print(f"{args.threads}-threaded results: {res} (runtime: {runtime:.6f} seconds)")
 
-    num_threads = 10
-    res, runtime = multi_threaded(vals, num_threads)    
-    print(f"{num_threads}-threaded results: {res} (runtime: {runtime:.6f} seconds)")
-
-    res, runtime = multi_processed(vals, num_threads)    
-    print(f"{num_threads}-processed results: {res} (runtime: {runtime:.6f} seconds)")
+    if args.mode in ("processed", "all"):
+        res, runtime = multi_processed(args.vals, args.threads)
+        print(f"{args.threads}-processed results: {res} (runtime: {runtime:.6f} seconds)")
 
     # Results: 
     # vals = [26,27,28,29,30,31,32,33,34,35]

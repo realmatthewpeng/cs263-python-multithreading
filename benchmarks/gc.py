@@ -1,7 +1,8 @@
-import threading
-import time
+import argparse
 import gc
 import sys
+import threading
+import time
 
 """
 Program with many threads creating lots of objects, keeping some alive
@@ -52,19 +53,16 @@ def heavy_allocation_workload(thread_id, num_iterations):
     return len(live_objects)
 
 
-def run_gc_test():
+def run_gc_test(num_threads, iterations_per_thread):
     """Run GC impact test that actually triggers collections"""
-
-    NUM_THREADS = 8
-    ITERATIONS_PER_THREAD = 10_000  # Increased from 5,000
 
     gil_status = "Unknown"
     if hasattr(sys, "_is_gil_enabled"):
         gil_status = "DISABLED" if not sys._is_gil_enabled() else "Enabled"
     print(f"\nGIL status: {gil_status}")
-    print(f"Threads: {NUM_THREADS}")
-    print(f"Iterations per thread: {ITERATIONS_PER_THREAD:,}")
-    print(f"Total operations: {NUM_THREADS * ITERATIONS_PER_THREAD:,}")
+    print(f"Threads: {num_threads}")
+    print(f"Iterations per thread: {iterations_per_thread:,}")
+    print(f"Total operations: {num_threads * iterations_per_thread:,}")
 
     # Show GC threshold
     threshold = gc.get_threshold()
@@ -90,9 +88,9 @@ def run_gc_test():
     start_time = time.time()
 
     threads = []
-    for i in range(NUM_THREADS):
+    for i in range(num_threads):
         t = threading.Thread(
-            target=heavy_allocation_workload, args=(i, ITERATIONS_PER_THREAD)
+            target=heavy_allocation_workload, args=(i, iterations_per_thread)
         )
         threads.append(t)
         t.start()
@@ -129,4 +127,9 @@ def run_gc_test():
 
 
 if __name__ == "__main__":
-    result = run_gc_test()
+    parser = argparse.ArgumentParser(description="GC impact benchmark for multi-threaded allocation workloads")
+    parser.add_argument("--threads", type=int, default=8, help="Number of threads (default: 8)")
+    parser.add_argument("--iterations", type=int, default=10000, help="Iterations per thread (default: 10000)")
+    args = parser.parse_args()
+
+    result = run_gc_test(args.threads, args.iterations)

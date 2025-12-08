@@ -6,10 +6,12 @@ Usage:
     python3 run_and_monitor.py python3 your_prog.py arg1 arg2 ...
 """
 
+import argparse
+import subprocess
 import sys
 import time
+
 import psutil
-import subprocess
 
 def get_total_rss(proc):
     """Return total RSS of proc + all children."""
@@ -35,12 +37,31 @@ def get_total_rss(proc):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: run_and_monitor.py <command> [args...]")
+    parser = argparse.ArgumentParser(
+        description="Run a program and monitor its total memory usage (RSS), including all child processes.",
+        epilog="""Examples:
+  python run_and_monitor.py python3 your_script.py arg1 arg2
+  python run_and_monitor.py --interval 0.05 python3 heavy_computation.py
+  python run_and_monitor.py --verbose python3 benchmarks/matmul.py --threads 8
+
+The tool spawns the given command, samples memory usage at regular intervals,
+and reports peak memory usage when the process finishes.""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--interval", type=float, default=0.1,
+                        help="Memory sampling interval in seconds (default: 0.1)")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Print live memory usage during execution")
+    parser.add_argument("command", nargs=argparse.REMAINDER,
+                        help="Command to run (e.g., python3 script.py args...)")
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
         sys.exit(1)
 
     # Command to execute (list of args)
-    cmd = sys.argv[1:]
+    cmd = args.command
 
     # Start target program
     print(f"Starting: {' '.join(cmd)}")
@@ -56,9 +77,10 @@ def main():
 
             mem = get_total_rss(proc)
             peak = max(peak, mem)
-            # print(f"RSS: {mem / (1024*1024):.2f} MB")
+            if args.verbose:
+                print(f"RSS: {mem / (1024*1024):.2f} MB")
 
-            time.sleep(0.1)  # sampling interval
+            time.sleep(args.interval)  # sampling interval
     finally:
         # Ensure process is reaped in case of exceptions
         try:

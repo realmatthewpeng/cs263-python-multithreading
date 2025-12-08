@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import http.server
 import os
@@ -109,15 +110,18 @@ def start_server(directory, port, backlog=None):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Web request benchmark comparing serial, threaded, and executor-based fetching")
+    parser.add_argument("--num-files", type=int, default=12, help="Number of files to create (default: 12)")
+    parser.add_argument("--size-mb", type=int, default=16, help="Size of each file in MB (default: 16)")
+    parser.add_argument("--threads", type=int, default=8, help="Number of threads/workers (default: 8)")
+    parser.add_argument("--mode", type=str, choices=["serial", "threaded", "executor", "all"], default="all",
+                        help="Fetch mode (default: all)")
+    args = parser.parse_args()
 
     print("GIL is enabled: " + str(sys._is_gil_enabled()))
 
-    NUM_FILES = 12
-    SIZE_MB = 16
-    THREADS = 8
-
     tmpdir = tempfile.mkdtemp(prefix="web_bench_")
-    names = write_files(tmpdir, num_files=NUM_FILES, size_mb=SIZE_MB)
+    names = write_files(tmpdir, num_files=args.num_files, size_mb=args.size_mb)
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 0))
@@ -129,12 +133,20 @@ if __name__ == "__main__":
     print(f"Started local server on port {port}, serving {len(names)} files from {tmpdir}")
 
     try:
-        s = serial_fetch(urls)
-        t = threaded_fetch(urls, num_threads=THREADS)
-        e = executor_fetch(urls, num_workers=THREADS)
+        serial_result = None
+        threaded_result = None
+        executor_result = None
 
-        ok = s == t == e
-        print(f"Checksums match across methods: {ok}")
+        if args.mode in ("serial", "all"):
+            serial_result = serial_fetch(urls)
+        if args.mode in ("threaded", "all"):
+            threaded_result = threaded_fetch(urls, num_threads=args.threads)
+        if args.mode in ("executor", "all"):
+            executor_result = executor_fetch(urls, num_workers=args.threads)
+
+        if args.mode == "all":
+            ok = serial_result == threaded_result == executor_result
+            print(f"Checksums match across methods: {ok}")
     finally:
         try:
             server.shutdown()

@@ -1,3 +1,4 @@
+import argparse
 import threading
 import time
 
@@ -96,6 +97,31 @@ def test_safe(num_threads, increments_per_thread):
 if __name__ == "__main__":
     import sys
 
+    parser = argparse.ArgumentParser(
+        description="Memory safety benchmark demonstrating race conditions with/without GIL",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python mem_safety.py --threads 10 --increments 1000
+  python mem_safety.py --mode unsafe --threads 5 --increments 2000
+  python mem_safety.py --mode safe --threads 8
+
+This benchmark tests thread-safe vs unsafe counter increments:
+  - unsafe: Increment without lock (demonstrates race conditions with GIL disabled)
+  - safe:   Increment with lock (thread-safe, no lost increments)
+  - both:   Run both tests for comparison (default)
+
+Run with Python 3.13t and GIL disabled to observe race conditions:
+  python3.13t -X gil=0 mem_safety.py --mode unsafe
+"""
+    )
+    parser.add_argument("--threads", type=int, default=10,
+                        help="Number of threads (default: 10)")
+    parser.add_argument("--increments", type=int, default=1000,
+                        help="Increments per thread (default: 1000)")
+    parser.add_argument("--mode", type=str, choices=["unsafe", "safe", "both"], default="both",
+                        help="Test mode (default: both)")
+    args = parser.parse_args()
+
     # Check GIL status
     try:
         if hasattr(sys, '_is_gil_enabled'):
@@ -108,8 +134,10 @@ if __name__ == "__main__":
     print(f"GIL: {gil_status}")
 
     # Run tests
-    test_unsafe(10, 1000)
-    test_safe(10, 1000)
+    if args.mode in ("unsafe", "both"):
+        test_unsafe(args.threads, args.increments)
+    if args.mode in ("safe", "both"):
+        test_safe(args.threads, args.increments)
 
     # Results (Probably need to run multiple times to see variability)
     # Python 3.13t (GIL Disabled)

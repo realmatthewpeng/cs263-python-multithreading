@@ -151,54 +151,82 @@ def process_pool_reuse(num_procs: int, iterations: int):
                 r.get()
     return True
 
+BENCHMARKS = {
+    "repeated_creation": (repeated_creation, "thread"),
+    "batched_creation": (batched_creation, "thread"),
+    "threadpool_per_iter": (threadpool_creation_per_iteration, "thread"),
+    "threadpool_reuse": (threadpool_creation_reuse, "thread"),
+    "process_creation": (process_creation, "process"),
+    "process_pool_per_iter": (process_pool_per_iteration, "process"),
+    "process_pool_reuse": (process_pool_reuse, "process"),
+}
+
 def run_sweep(thread_counts, iterations, selected):
     print(f"sys._is_gil_enabled: {getattr(sys, '_is_gil_enabled', lambda: True)()}")
     print(f"Iterations per case: {iterations}")
+
     for n in thread_counts:
         print("\n---")
-        print(f"Threads: {n}")
-        if selected == -1:
-            # Threads
-            _ = repeated_creation(n, iterations)
-            _ = batched_creation(n, iterations)
-            _ = threadpool_creation_per_iteration(n, iterations)
-            _ = threadpool_creation_reuse(n, iterations)
-            # Processes
-            if iterations <= 20 and n <= 16:
-                _ = process_creation(n, iterations)
-                _ = process_pool_per_iteration(n, iterations)
-                _ = process_pool_reuse(n, iterations)
-        else:
-            if selected == 0:
-                _ = repeated_creation(n, iterations)
-            elif selected == 1:
-                _ = batched_creation(n, iterations)
-            elif selected == 2:
-                _ = threadpool_creation_per_iteration(n, iterations)
-            elif selected == 3:
-                _ = threadpool_creation_reuse(n, iterations)
-            elif selected == 4:
-                if iterations <= 20 and n <= 16:
-                    _ = process_creation(n, iterations)
-            elif selected == 5:
-                if iterations <= 20 and n <= 16:
-                    _ = process_pool_per_iteration(n, iterations)
-            elif selected == 6:
-                if iterations <= 20 and n <= 16:
-                    _ = process_pool_reuse(n, iterations)
+        print(f"Workers: {n}")
+
+        for name in selected:
+            func, kind = BENCHMARKS[name]
+            # Skip process benchmarks if iterations/workers too high
+            if kind == "process" and (iterations > 20 or n > 16):
+                print(f"{name}: skipped (iterations > 20 or workers > 16)")
+                continue
+            _ = func(n, iterations)
+
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--threads", type=int, nargs="+", default=[1,2,4,8,16])
-    p.add_argument("--iters", type=int, default=20, help="iterations per case")
-    p.add_argument("--mem", action="store_true", help="enable tracemalloc memory tracking")
-    p.add_argument("--selected", type=int, default=-1, help="select test to run")
+    p = argparse.ArgumentParser(
+        description="Thread/process creation overhead benchmark",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python thread_overhead.py --threads 4 8 16 --iters 100
+  python thread_overhead.py --mode threads --iters 50
+  python thread_overhead.py --benchmarks repeated_creation batched_creation
+  python thread_overhead.py --mem --threads 8
+
+Available benchmarks:
+  Thread-based:
+    repeated_creation      - Create and start threads immediately
+    batched_creation       - Create threads then start in batch
+    threadpool_per_iter    - Create ThreadPoolExecutor each iteration
+    threadpool_reuse       - Reuse single ThreadPoolExecutor
+
+  Process-based (limited to iterations <= 20, workers <= 16):
+    process_creation       - Create and start processes immediately
+    process_pool_per_iter  - Create multiprocessing.Pool each iteration
+    process_pool_reuse     - Reuse single multiprocessing.Pool
+"""
+    )
+    p.add_argument("--threads", type=int, nargs="+", default=[1, 2, 4, 8, 16],
+                   help="Worker counts to test (default: 1 2 4 8 16)")
+    p.add_argument("--iters", type=int, default=20,
+                   help="Iterations per case (default: 20)")
+    p.add_argument("--mem", action="store_true",
+                   help="Enable tracemalloc memory tracking")
+    p.add_argument("--mode", choices=["all", "threads", "processes"], default="all",
+                   help="Run thread benchmarks, process benchmarks, or all (default: all)")
+    p.add_argument("--benchmarks", type=str, nargs="+", choices=list(BENCHMARKS.keys()),
+                   help="Select specific benchmarks to run (overrides --mode)")
     args = p.parse_args()
 
     global MEM_TRACK
     MEM_TRACK = bool(args.mem)
 
-    run_sweep(args.threads, args.iters, args.selected)
+    # Determine which benchmarks to run
+    if args.benchmarks:
+        selected = args.benchmarks
+    elif args.mode == "threads":
+        selected = [name for name, (_, kind) in BENCHMARKS.items() if kind == "thread"]
+    elif args.mode == "processes":
+        selected = [name for name, (_, kind) in BENCHMARKS.items() if kind == "process"]
+    else:  # all
+        selected = list(BENCHMARKS.keys())
+
+    run_sweep(args.threads, args.iters, selected)
 
 if __name__ == "__main__":
     main()

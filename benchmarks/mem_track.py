@@ -1,3 +1,4 @@
+import argparse
 import psutil
 import os
 import threading
@@ -302,12 +303,37 @@ def save_res(results, file_name):
 
 
 def main():
-    import argparse
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test", type=int, default=None)
-    parser.add_argument("--visual", type=bool, default=False)
-    parser.add_argument("--num_threads", type=int, default=8)
+    parser = argparse.ArgumentParser(
+        description="Memory tracking benchmark for multi-threaded workloads",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python mem_track.py --test thread_local --threads 8
+  python mem_track.py --test shared --threads 4
+  python mem_track.py --test fragmentation --threads 8 --duration 15
+  python mem_track.py --visualize
+
+Available tests:
+  thread_local   - Each thread allocates its own large data structure
+                   Tests per-thread memory arena overhead with GIL on/off
+  
+  shared         - All threads share one large read-only data structure
+                   Tests memory overhead from thread bookkeeping/stack
+  
+  fragmentation  - Threads continuously allocate/deallocate memory
+                   Tests memory patterns and fragmentation over time
+                   Results are saved to JSON for later visualization
+"""
+    )
+    parser.add_argument("--test", type=str, 
+                        choices=["thread_local", "shared", "fragmentation"],
+                        help="Test to run")
+    parser.add_argument("--threads", type=int, default=8,
+                        help="Number of threads (default: 8)")
+    parser.add_argument("--duration", type=int, default=10,
+                        help="Duration in seconds for fragmentation test (default: 10)")
+    parser.add_argument("--visualize", action="store_true",
+                        help="Generate visualization from saved JSON results")
     args = parser.parse_args()
 
     try:
@@ -318,23 +344,28 @@ def main():
     except:
         gil_status = "ENABLED"
 
-    print(f"GIL: {gil_status}")
-
-    NUM_THREADS = args.num_threads
-    print(f"Number of threads: {NUM_THREADS}")
-
-    if args.test == 1:
-        res = test_thread_local_mem(NUM_THREADS)
-        print(res)
-    elif args.test == 2:
-        res = test_shared_mem(NUM_THREADS)
-        print(res)
-    elif args.test == 3:
-        res = test_fragmentation(NUM_THREADS)
-        save_res(res, f"mem_frag_{gil_status}")
-
-    if args.visual:
+    if args.visualize:
+        print("Generating visualization from saved results...")
         visualize()
+        return
+
+    if not args.test:
+        parser.print_help()
+        return
+
+    print(f"GIL: {gil_status}")
+    print(f"Number of threads: {args.threads}")
+
+    if args.test == "thread_local":
+        res = test_thread_local_mem(args.threads)
+        print(res)
+    elif args.test == "shared":
+        res = test_shared_mem(args.threads)
+        print(res)
+    elif args.test == "fragmentation":
+        print(f"Duration: {args.duration}s")
+        res = test_fragmentation(args.threads, duration=args.duration)
+        save_res(res, f"mem_frag_{gil_status}")
 
 
 if __name__ == "__main__":
