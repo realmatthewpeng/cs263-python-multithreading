@@ -1,3 +1,4 @@
+import argparse
 import re
 from pathlib import Path
 
@@ -79,7 +80,17 @@ def compare_files(a, b):
     print(f"Average % change across {len(pct_values)} benchmarks: {avg_pct:+7.3f}%")
 
 
-a = Path("pyperf_results/full_bench_313.txt")
-b = Path("pyperf_results/full_bench_313t.txt")
-compare_files(a, b)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Compare two pyperformance benchmark result files"
+    )
+    parser.add_argument("file_a", nargs="?", default="pyperf_results/full_bench_313.txt",
+                        help="First benchmark file (default: pyperf_results/full_bench_313.txt)")
+    parser.add_argument("file_b", nargs="?", default="pyperf_results/full_bench_313t.txt",
+                        help="Second benchmark file (default: pyperf_results/full_bench_313t.txt)")
+    args = parser.parse_args()
+
+    a = Path(args.file_a)
+    b = Path(args.file_b)
+    compare_files(a, b)
 
