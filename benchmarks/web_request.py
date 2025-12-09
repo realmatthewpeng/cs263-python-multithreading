@@ -81,6 +81,13 @@ def executor_fetch(urls, num_workers=4):
 
 
 class _SilentHandler(http.server.SimpleHTTPRequestHandler):
+    delay = 0  # seconds to sleep before serving each request
+
+    def do_GET(self):
+        if self.delay > 0:
+            time.sleep(self.delay)
+        return super().do_GET()
+
     def log_message(self, format, *args):
         pass
 
@@ -116,9 +123,13 @@ if __name__ == "__main__":
     parser.add_argument("--threads", type=int, default=8, help="Number of threads/workers (default: 8)")
     parser.add_argument("--mode", type=str, choices=["serial", "threaded", "executor", "all"], default="all",
                         help="Fetch mode (default: all)")
+    parser.add_argument("--delay", type=float, default=0, help="Delay in seconds before serving each request (default: 0)")
     args = parser.parse_args()
 
     print("GIL is enabled: " + str(sys._is_gil_enabled()))
+
+    # Set the delay for the server handler
+    _SilentHandler.delay = args.delay
 
     tmpdir = tempfile.mkdtemp(prefix="web_bench_")
     names = write_files(tmpdir, num_files=args.num_files, size_mb=args.size_mb)
